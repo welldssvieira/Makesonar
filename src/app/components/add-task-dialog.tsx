@@ -6,6 +6,8 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Task } from '../types/task';
 import { useTags } from '../hooks/use-tags';
+import { Alert, AlertDescription } from './ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface AddTaskDialogProps {
   open: boolean;
@@ -13,6 +15,7 @@ interface AddTaskDialogProps {
   onSave: (title: string, value: number, tagId: string, energyLevel: number) => void;
   onUpdate?: (id: string, updates: Partial<Task>) => void;
   editingTask?: Task | null;
+  onOpenManageTags: () => void;
 }
 
 export function AddTaskDialog({ 
@@ -20,7 +23,8 @@ export function AddTaskDialog({
   onOpenChange, 
   onSave,
   onUpdate,
-  editingTask 
+  editingTask,
+  onOpenManageTags
 }: AddTaskDialogProps) {
   const { tags } = useTags();
   const [title, setTitle] = useState('');
@@ -44,6 +48,12 @@ export function AddTaskDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (tags.length === 0) {
+      alert('Você precisa criar pelo menos uma tag antes de adicionar tarefas.');
+      return;
+    }
+    
     const numValue = parseFloat(value) || 0;
     const numEnergy = parseInt(energyLevel) || 3;
     
@@ -61,6 +71,11 @@ export function AddTaskDialog({
     onOpenChange(false);
   };
 
+  const handleManageTags = () => {
+    onOpenChange(false);
+    onOpenManageTags();
+  };
+
   const getEnergyLabel = (level: string) => {
     const labels: Record<string, string> = {
       '1': '⚡ Muito Baixa',
@@ -71,6 +86,37 @@ export function AddTaskDialog({
     };
     return labels[level] || level;
   };
+
+  if (tags.length === 0 && open) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nenhuma tag encontrada</DialogTitle>
+            <DialogDescription>
+              Você precisa criar pelo menos uma tag antes de adicionar tarefas.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Alert>
+            <AlertCircle className="size-4" />
+            <AlertDescription>
+              Tags ajudam a organizar suas tarefas em categorias como Trabalho, Pessoal, Estudos, etc.
+            </AlertDescription>
+          </Alert>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleManageTags}>
+              Gerenciar Tags
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -115,7 +161,18 @@ export function AddTaskDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tag">Tag</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="tag">Tag</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleManageTags}
+                  className="text-xs h-auto py-1"
+                >
+                  Gerenciar tags
+                </Button>
+              </div>
               <Select value={tagId} onValueChange={setTagId} required>
                 <SelectTrigger id="tag">
                   <SelectValue placeholder="Selecione uma tag" />

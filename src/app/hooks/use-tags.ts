@@ -12,12 +12,23 @@ const DEFAULT_TAGS: Tag[] = [
 
 export function useTags() {
   const [tags, setTags] = useState<Tag[]>(() => {
-    const stored = localStorage.getItem(TAGS_KEY);
-    return stored ? JSON.parse(stored) : DEFAULT_TAGS;
+    try {
+      const stored = localStorage.getItem(TAGS_KEY);
+      if (!stored) return DEFAULT_TAGS;
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_TAGS;
+    } catch (error) {
+      console.error('Erro ao carregar tags:', error);
+      return DEFAULT_TAGS;
+    }
   });
 
   useEffect(() => {
-    localStorage.setItem(TAGS_KEY, JSON.stringify(tags));
+    try {
+      localStorage.setItem(TAGS_KEY, JSON.stringify(tags));
+    } catch (error) {
+      console.error('Erro ao salvar tags:', error);
+    }
   }, [tags]);
 
   const addTag = (name: string, color: string) => {
@@ -44,11 +55,16 @@ export function useTags() {
     return tags.find(tag => tag.id === id);
   };
 
+  const canDeleteTag = (id: string, tasks: any[]) => {
+    return !tasks.some(task => task.tagId === id);
+  };
+
   return {
     tags,
     addTag,
     updateTag,
     deleteTag,
     getTagById,
+    canDeleteTag,
   };
 }

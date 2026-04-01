@@ -6,21 +6,43 @@ const TRANSACTIONS_KEY = 'mylist_transactions';
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.error('Erro ao carregar tarefas:', error);
+      return [];
+    }
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const stored = localStorage.getItem(TRANSACTIONS_KEY);
-    return stored ? JSON.parse(stored) : [];
+    try {
+      const stored = localStorage.getItem(TRANSACTIONS_KEY);
+      if (!stored) return [];
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.error('Erro ao carregar transações:', error);
+      return [];
+    }
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    } catch (error) {
+      console.error('Erro ao salvar tarefas:', error);
+    }
   }, [tasks]);
 
   useEffect(() => {
-    localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+    try {
+      localStorage.setItem(TRANSACTIONS_KEY, JSON.stringify(transactions));
+    } catch (error) {
+      console.error('Erro ao salvar transações:', error);
+    }
   }, [transactions]);
 
   const addTask = (title: string, value: number, tagId: string, energyLevel: number) => {
@@ -51,6 +73,20 @@ export function useTasks() {
     setTasks(tasks.map(task => 
       task.id === id ? { ...task, ...updates } : task
     ));
+    
+    // Atualiza a transação correspondente se o título ou valor mudaram
+    if (updates.title || updates.value !== undefined) {
+      setTransactions(transactions.map(t => {
+        if (t.taskId === id) {
+          return {
+            ...t,
+            taskTitle: updates.title || t.taskTitle,
+            amount: updates.value !== undefined ? updates.value : t.amount,
+          };
+        }
+        return t;
+      }));
+    }
   };
 
   const toggleComplete = (id: string) => {

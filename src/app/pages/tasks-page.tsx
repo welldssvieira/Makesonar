@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTasks } from '../hooks/use-tasks';
+import { useDataIntegrity } from '../hooks/use-data-integrity';
 import { Header } from '../components/header';
 import { StatsBar } from '../components/stats-bar';
 import { EnergyLevelSelector } from '../components/energy-level-selector';
@@ -14,6 +15,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../componen
 const ENERGY_LEVEL_KEY = 'mylist_energy_level';
 
 export function TasksPage() {
+  // Inicializa verificação de integridade dos dados
+  useDataIntegrity();
+  
   const {
     tasks,
     addTask,
@@ -165,11 +169,13 @@ export function TasksPage() {
         onSave={addTask}
         onUpdate={updateTask}
         editingTask={editingTask}
+        onOpenManageTags={() => setTagsDialogOpen(true)}
       />
 
       <ManageTagsDialog
         open={tagsDialogOpen}
         onOpenChange={setTagsDialogOpen}
+        tasks={tasks}
       />
     </div>
   );

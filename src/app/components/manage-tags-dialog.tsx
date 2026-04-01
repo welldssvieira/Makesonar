@@ -3,12 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertCircle } from 'lucide-react';
 import { useTags } from '../hooks/use-tags';
+import { Alert, AlertDescription } from './ui/alert';
 
 interface ManageTagsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  tasks: any[];
 }
 
 const PRESET_COLORS = [
@@ -18,8 +20,8 @@ const PRESET_COLORS = [
   '#ec4899', '#f43f5e', '#64748b', '#78716c', '#0f172a'
 ];
 
-export function ManageTagsDialog({ open, onOpenChange }: ManageTagsDialogProps) {
-  const { tags, addTag, updateTag, deleteTag } = useTags();
+export function ManageTagsDialog({ open, onOpenChange, tasks }: ManageTagsDialogProps) {
+  const { tags, addTag, updateTag, deleteTag, canDeleteTag } = useTags();
   const [newTagName, setNewTagName] = useState('');
   const [newTagColor, setNewTagColor] = useState(PRESET_COLORS[0]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -37,9 +39,18 @@ export function ManageTagsDialog({ open, onOpenChange }: ManageTagsDialogProps) 
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Tem certeza que deseja excluir esta tag? Tarefas com esta tag podem ficar sem categoria.')) {
+    if (!canDeleteTag(id, tasks)) {
+      alert('Não é possível excluir esta tag pois existem tarefas usando ela. Delete ou edite as tarefas primeiro.');
+      return;
+    }
+    
+    if (confirm('Tem certeza que deseja excluir esta tag?')) {
       deleteTag(id);
     }
+  };
+
+  const getTaskCount = (tagId: string) => {
+    return tasks.filter(task => task.tagId === tagId).length;
   };
 
   return (
@@ -55,50 +66,74 @@ export function ManageTagsDialog({ open, onOpenChange }: ManageTagsDialogProps) 
         {/* Lista de Tags Existentes */}
         <div className="space-y-3 py-4">
           <h3 className="text-sm font-medium">Tags existentes</h3>
-          <div className="space-y-2">
-            {tags.map(tag => (
-              <div key={tag.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                <div 
-                  className="size-6 rounded-full border-2 border-white shadow-sm"
-                  style={{ backgroundColor: tag.color }}
-                />
-                <span className="flex-1">{tag.name}</span>
+          
+          {tags.length === 0 ? (
+            <Alert>
+              <AlertCircle className="size-4" />
+              <AlertDescription>
+                Nenhuma tag criada ainda. Adicione sua primeira tag abaixo.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="space-y-2">
+              {tags.map(tag => {
+                const taskCount = getTaskCount(tag.id);
+                const isInUse = taskCount > 0;
                 
-                {editingId === tag.id ? (
-                  <div className="flex gap-1">
-                    {PRESET_COLORS.map(color => (
-                      <button
-                        key={color}
-                        className="size-6 rounded-full border-2 border-white shadow-sm hover:scale-110 transition-transform"
-                        style={{ backgroundColor: color }}
-                        onClick={() => {
-                          handleUpdateColor(tag.id, color);
-                          setEditingId(null);
-                        }}
-                      />
-                    ))}
+                return (
+                  <div key={tag.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                    <div 
+                      className="size-6 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    <div className="flex-1">
+                      <span>{tag.name}</span>
+                      {isInUse && (
+                        <p className="text-xs text-neutral-500">
+                          {taskCount} tarefa{taskCount !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {editingId === tag.id ? (
+                      <div className="flex gap-1 flex-wrap max-w-md">
+                        {PRESET_COLORS.map(color => (
+                          <button
+                            key={color}
+                            className="size-6 rounded-full border-2 border-white shadow-sm hover:scale-110 transition-transform"
+                            style={{ backgroundColor: color }}
+                            onClick={() => {
+                              handleUpdateColor(tag.id, color);
+                              setEditingId(null);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditingId(tag.id)}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(tag.id)}
+                          disabled={isInUse}
+                          title={isInUse ? 'Tag em uso - não pode ser deletada' : 'Deletar tag'}
+                        >
+                          <Trash2 className={`size-4 ${isInUse ? 'text-neutral-300' : 'text-red-500'}`} />
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEditingId(tag.id)}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(tag.id)}
-                    >
-                      <Trash2 className="size-4 text-red-500" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Adicionar Nova Tag */}
@@ -112,6 +147,12 @@ export function ManageTagsDialog({ open, onOpenChange }: ManageTagsDialogProps) 
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
                 placeholder="Digite o nome da tag"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
               />
             </div>
             
@@ -131,7 +172,7 @@ export function ManageTagsDialog({ open, onOpenChange }: ManageTagsDialogProps) 
               </div>
             </div>
 
-            <Button onClick={handleAddTag} className="w-full">
+            <Button onClick={handleAddTag} className="w-full" disabled={!newTagName.trim()}>
               <Plus className="size-4" />
               Adicionar tag
             </Button>

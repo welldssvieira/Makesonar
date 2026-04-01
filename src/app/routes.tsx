@@ -1,8 +1,8 @@
-import { createBrowserRouter } from "react-router";
+import { createHashRouter } from "react-router";
 import { TasksPage } from "./pages/tasks-page";
 import { HistoryPage } from "./pages/history-page";
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: "/",
     Component: TasksPage,

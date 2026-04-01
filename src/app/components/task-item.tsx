@@ -40,6 +40,11 @@ export function TaskItem({ task, onToggle, onEdit, onDelete }: TaskItemProps) {
     };
     return colors[level] || 'text-yellow-500';
   };
+  
+  // Proteção contra dados corrompidos
+  if (!task || !task.id) {
+    return null;
+  }
 
   return (
     <div className="group bg-white border rounded-lg p-4 hover:shadow-md transition-shadow">
